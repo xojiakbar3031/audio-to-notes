@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Audio → Notes 🎙️
 
-## Getting Started
+Turn any recording into structured notes. You can record a lecture or meeting live, or
+upload an audio file. The app transcribes it with Whisper and gives you a summary, the
+key points and the action items as Markdown. It supports **Uzbek, Russian and English**.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Unlimited live recording.** Audio is cut into independent 3-minute segments, and
+  each one is transcribed while you keep talking. Recording length isn't capped, and a
+  failed segment can be retried on its own.
+- **File upload of any length** (MP3, M4A, WAV, WEBM up to 150 MB). The browser decodes
+  the file, downmixes it to 16 kHz mono and splits it into 2-minute WAV chunks. Each
+  request stays under the 4.5 MB serverless payload limit, so this works on Vercel as is.
+- **Structured summaries.** An LLM writes a summary, key points and action items in the
+  language you picked.
+- **Markdown export.** You can copy notes or download them as `.md` (summary + full
+  transcript).
+- **Local history.** Past notes are kept in `localStorage`, so no database or accounts
+  are needed.
+- **API key stays on the server.** The browser only talks to Next.js route handlers,
+  which validate input size before calling Groq.
+
+## How it works
+
+```
+mic (MediaRecorder, 3-min segments) ─┐
+                                     ├─► /api/transcribe ─► Groq Whisper large-v3-turbo
+file (Web Audio → 16 kHz WAV chunks) ┘                              │
+                                                                    ▼
+                                       ordered transcript ─► /api/summarize ─► Llama 3.3 70B
+                                                                    │
+                                                                    ▼
+                                              Markdown notes · history · .md export
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Next.js 16 (App Router, Route Handlers) · React 19 · TypeScript · Tailwind CSS 4 ·
+Groq API (Whisper + Llama) · Web Audio API · MediaRecorder
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Run locally
 
-## Learn More
+```bash
+npm install
+cp .env.local.example .env.local   # add your free key from https://console.groq.com/keys
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open <http://localhost:3000>.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Env var | Default |
+|---|---|
+| `GROQ_API_KEY` | — (required) |
+| `GROQ_TRANSCRIBE_MODEL` | `whisper-large-v3-turbo` |
+| `GROQ_SUMMARY_MODEL` | `llama-3.3-70b-versatile` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy
 
-## Deploy on Vercel
+Import the repo on Vercel and add `GROQ_API_KEY` as an environment variable. No other
+setup is needed.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
